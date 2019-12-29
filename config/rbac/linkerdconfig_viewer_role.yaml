@@ -1,0 +1,20 @@
+# permissions to do viewer linkerdconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: linkerdconfig-viewer-role
+rules:
+- apiGroups:
+  - config.linkerd.io
+  resources:
+  - linkerdconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - config.linkerd.io
+  resources:
+  - linkerdconfigs/status
+  verbs:
+  - get

@@ -1,3 +1,7 @@
 domain: linkerd.io
 repo: github.com/linkerd/linkerd-config
+resources:
+- group: config
+  kind: LinkerdConfig
+  version: v1alpha1
 version: "2"

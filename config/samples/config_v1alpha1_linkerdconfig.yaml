@@ -1,0 +1,7 @@
+apiVersion: config.linkerd.io/v1alpha1
+kind: LinkerdConfig
+metadata:
+  name: linkerdconfig-sample
+spec:
+  # Add fields here
+  foo: bar

@@ -1,0 +1,26 @@
+# permissions to do edit linkerdconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: linkerdconfig-editor-role
+rules:
+- apiGroups:
+  - config.linkerd.io
+  resources:
+  - linkerdconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.linkerd.io
+  resources:
+  - linkerdconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
