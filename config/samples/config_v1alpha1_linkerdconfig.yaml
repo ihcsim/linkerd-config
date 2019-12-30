@@ -1,7 +1,56 @@
 apiVersion: config.linkerd.io/v1alpha1
 kind: LinkerdConfig
 metadata:
-  name: linkerdconfig-sample
+  name: linkerd-config
 spec:
-  # Add fields here
-  foo: bar
+  global:
+    clusterDomain: cluster.local
+    cniEnabled: false
+    configMap: linkerd-config2
+    identityContext:
+      trustDomain: cluster.local
+      trustAnchorsPEM: |
+        -----BEGIN CERTIFICATE-----
+        MIIBwTCCAWegAwIBAgIRALnGbDHymcPcwLNGIh3MHIwwCgYIKoZIzj0EAwIwKTEn
+        MCUGA1UEAxMeaWRlbnRpdHkubGlua2VyZC5jbHVzdGVyLmxvY2FsMB4XDTE5MTIz
+        MDA0MDMwMFoXDTI5MTIyNzA0MDMwMFowKTEnMCUGA1UEAxMeaWRlbnRpdHkubGlu
+        a2VyZC5jbHVzdGVyLmxvY2FsMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyUNf
+        JbwAaGdN8EIDA0UFoEhYh9TudqumTkdwWM6kpIdEBTR1Ysg939S5zziCFTYFHjB7
+        U37h4kTNPq+9fRlUtaNwMG4wDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYB
+        Af8CAQEwHQYDVR0OBBYEFCcAIt4ukdA1IlACi2EcSBYYruMKMCkGA1UdEQQiMCCC
+        HmlkZW50aXR5LmxpbmtlcmQuY2x1c3Rlci5sb2NhbDAKBggqhkjOPQQDAgNIADBF
+        AiBirnYYl0RyoOLMhw277hJGgK//UyWMI7X/Q9qvRkHmjAIhAIAoF2KxnbpZrYEN
+        Br5qTZbrlYb18EX05ZCFu28YYupT
+        -----END CERTIFICATE-----
+
+      issuanceLifeTime: 86400s
+      clockSkewAllowance: 20s
+      scheme: linkerd.io/tls
+    linkerdNamespace: linkerd
+    omitWebhookSideEffects: true
+    version: edge-19.12.3
+  proxy:
+    adminPort: 4191
+    controlPort: 4190
+    disableExternalProfiles: true
+    ignoreInboundPorts: [8888, 9999]
+    ignoreOutboundPorts: [8888, 9999]
+    inboundPort: 4143
+    logLevel: warn,linkerd2_proxy=info
+    outboundPort: 4140
+    proxyImage:
+      name: gcr.io/linkerd-io/proxy
+      pullPolicy: IfNotPresent
+    proxyInitImage:
+      name: gcr.io/linkerd-io/proxy-init
+      pullPolicy: IfNotPresent
+    proxyInitImageVersion: v1.2.0
+    proxyVersion: edge-19.12.3
+    proxyUID: 2102
+    resource:
+      limits:
+        cpu: "1"
+        memory: 250Mi
+      requests:
+        cpu: 100m
+        memory: 20Mi

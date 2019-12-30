@@ -16,8 +16,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -39,12 +37,12 @@ type LinkerdConfigStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// A list of pointers to injected workloads
 	// +kubebuilder:validation:Optional
+	// A list of pointers to injected workloads
 	Injected []corev1.ObjectReference `json:"injected,omitempty"`
 
-	// A list of pointers to uninjected workloads
 	// +kubebuilder:validation:Optional
+	// A list of pointers to uninjected workloads
 	Uninjected []corev1.ObjectReference `json:"uninjected,omitempty"`
 }
 
@@ -72,21 +70,22 @@ type LinkerdConfigList struct {
 
 // Global contains global configuration of the control plane.
 type Global struct {
-	LinkerdNamespace       string          `json:"linkerdNamespace"`
-	CNIEnabled             bool            `json:"cniEnabled"`
-	Version                string          `json:"version"`
-	IdentityContext        IdentityContext `json:"identityContext"`
-	OmitWebhookSideEffects bool            `json:"omitWebhookSideEffects"`
 	ClusterDomain          string          `json:"clusterDomain"`
+	CNIEnabled             bool            `json:"cniEnabled"`
+	ConfigMap              string          `json:"configMap"`
+	IdentityContext        IdentityContext `json:"identityContext"`
+	LinkerdNamespace       string          `json:"linkerdNamespace"`
+	OmitWebhookSideEffects bool            `json:"omitWebhookSideEffects"`
+	Version                string          `json:"version"`
 }
 
 // IdentityContext contains mTLS trust configuration.
 type IdentityContext struct {
-	TrustDomain        string        `json:"trustDomain"`
-	TrustAnchorsPEM    string        `json:"trustAnchorsPEM"`
-	IssuanceLifeTime   time.Duration `json:"issuanceLifeTime"`
-	ClockSkewAllowance time.Duration `json:"clockSkewAllowance"`
-	Scheme             string        `json:"scheme"`
+	TrustDomain        string `json:"trustDomain"`
+	TrustAnchorsPEM    string `json:"trustAnchorsPEM"`
+	IssuanceLifeTime   string `json:"issuanceLifeTime"`
+	ClockSkewAllowance string `json:"clockSkewAllowance"`
+	Scheme             string `json:"scheme"`
 }
 
 // Proxy contains the dataplane's proxy configuration.
@@ -94,8 +93,6 @@ type Proxy struct {
 	AdminPort               Port      `json:"adminPort"`
 	ControlPort             Port      `json:"controlPort"`
 	DisableExternalProfiles bool      `json:"disableExternalProfiles"`
-	IgnoreInboundPorts      Ports     `json:"ignoreInboundPorts"`
-	IgnoreOutboundPorts     Ports     `json:"ignoreOutboundPorts"`
 	InboundPort             Port      `json:"inboundPort"`
 	LogLevel                string    `json:"logLevel"`
 	OutboundPort            Port      `json:"outboundPort"`
@@ -105,6 +102,12 @@ type Proxy struct {
 	ProxyVersion            string    `json:"proxyVersion"`
 	ProxyUID                uint64    `json:"proxyUID"`
 	Resource                Resources `json:"resource"`
+
+	//+kubebuilder:validation:Optional
+	IgnoreInboundPorts Ports `json:"ignoreInboundPorts"`
+
+	//+kubebuilder:validation:Optional
+	IgnoreOutboundPorts Ports `json:"ignoreOutboundPorts"`
 }
 
 // Image represents a container's image.
