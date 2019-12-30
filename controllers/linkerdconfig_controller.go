@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -89,33 +90,71 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return ctrl.Result{}, err
 	}
 
-	log.V(1).Info("reconciling the configmap")
-	if err := r.reconcileConfigMap(&config, &configmap); err != nil {
-		return ctrl.Result{}, err
-	}
+	var (
+		wait    = sync.WaitGroup{}
+		errChan = make(chan error)
+		errs    []error
+	)
 
-	log.V(1).Info("reconciling the custom resource's status")
-	if err := r.reconcileStatus(ctx, &config); err != nil {
-		return ctrl.Result{}, err
-	}
+	// gather all errors returned by the goroutines
+	go func() {
+		for err := range errChan {
+			errs = append(errs, err)
+		}
+	}()
 
-	if createConfigCM {
-		log.Info("creating the missing configmap", "name", configmap.Name)
-		if err := r.Create(ctx, &configmap); err != nil {
-			log.Error(err, "fail to create configmap")
-			return ctrl.Result{}, err
+	wait.Add(1)
+	go func() {
+		defer wait.Done()
+
+		log.V(1).Info("attempting to reconcile and update the configmap")
+		if err := r.reconcileConfigMap(&config, &configmap); err != nil {
+			errChan <- err
+			return
 		}
 
-		return ctrl.Result{}, nil
-	}
+		if createConfigCM {
+			if err := r.Create(ctx, &configmap); err != nil {
+				log.Error(err, "fail to create the configmap")
+				errChan <- err
+				return
+			}
 
-	log.V(1).Info("updating the configmap")
-	if err := r.Update(ctx, &configmap); err != nil {
-		return ctrl.Result{}, err
-	}
+			if err := r.Update(ctx, &config); err != nil {
+				errChan <- err
+			}
 
-	log.V(1).Info("updating the custom resource's status")
-	if err := r.Status().Update(ctx, &config); err != nil {
+			return
+		}
+
+		if err := r.Update(ctx, &configmap); err != nil {
+			log.Error(err, "fail to update the configmap")
+			errChan <- err
+		}
+		log.V(1).Info("successfully reconciled and updated the configmap")
+	}()
+
+	wait.Add(1)
+	go func() {
+		defer wait.Done()
+
+		log.V(1).Info("attempting to reconcile and update the custom resource")
+		if err := r.reconcileStatus(ctx, &config); err != nil {
+			errChan <- err
+			return
+		}
+
+		if err := r.Status().Update(ctx, &config); err != nil {
+			errChan <- err
+			return
+		}
+		log.V(1).Info("successfullly reconciled and updated the custom resource")
+	}()
+
+	wait.Wait()
+
+	//  return any errors returned by the goroutines to the caller
+	for _, err := range errs {
 		return ctrl.Result{}, err
 	}
 
