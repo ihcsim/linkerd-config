@@ -32,6 +32,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/linkerd/linkerd-config/api/v1alpha1"
 	configv1alpha1 "github.com/linkerd/linkerd-config/api/v1alpha1"
@@ -165,6 +166,7 @@ func (r *LinkerdConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&configv1alpha1.LinkerdConfig{}).
 		Owns(&corev1.ConfigMap{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
 
