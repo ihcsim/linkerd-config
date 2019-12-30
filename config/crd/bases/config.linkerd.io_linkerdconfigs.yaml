@@ -1,0 +1,275 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.4
+  creationTimestamp: null
+  name: linkerdconfigs.config.linkerd.io
+spec:
+  group: config.linkerd.io
+  names:
+    kind: LinkerdConfig
+    listKind: LinkerdConfigList
+    plural: linkerdconfigs
+    singular: linkerdconfig
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: LinkerdConfig is the Schema for the linkerdconfigs API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: LinkerdConfigSpec defines the desired state of LinkerdConfig
+          properties:
+            global:
+              description: Global contains global configuration of the control plane.
+              properties:
+                clusterDomain:
+                  type: string
+                cniEnabled:
+                  type: boolean
+                configMap:
+                  type: string
+                identityContext:
+                  description: IdentityContext contains mTLS trust configuration.
+                  properties:
+                    clockSkewAllowance:
+                      type: string
+                    issuanceLifeTime:
+                      type: string
+                    scheme:
+                      type: string
+                    trustAnchorsPEM:
+                      type: string
+                    trustDomain:
+                      type: string
+                  required:
+                  - clockSkewAllowance
+                  - issuanceLifeTime
+                  - scheme
+                  - trustAnchorsPEM
+                  - trustDomain
+                  type: object
+                linkerdNamespace:
+                  type: string
+                omitWebhookSideEffects:
+                  type: boolean
+                version:
+                  type: string
+              required:
+              - clusterDomain
+              - cniEnabled
+              - configMap
+              - identityContext
+              - linkerdNamespace
+              - omitWebhookSideEffects
+              - version
+              type: object
+            proxy:
+              description: Proxy contains the dataplane's proxy configuration.
+              properties:
+                adminPort:
+                  description: Port represents a port number.
+                  format: int32
+                  type: integer
+                controlPort:
+                  description: Port represents a port number.
+                  format: int32
+                  type: integer
+                disableExternalProfiles:
+                  type: boolean
+                ignoreInboundPorts:
+                  description: Ports is a collection of ports.
+                  items:
+                    description: Port represents a port number.
+                    format: int32
+                    type: integer
+                  type: array
+                ignoreOutboundPorts:
+                  description: Ports is a collection of ports.
+                  items:
+                    description: Port represents a port number.
+                    format: int32
+                    type: integer
+                  type: array
+                inboundPort:
+                  description: Port represents a port number.
+                  format: int32
+                  type: integer
+                logLevel:
+                  type: string
+                outboundPort:
+                  description: Port represents a port number.
+                  format: int32
+                  type: integer
+                proxyImage:
+                  description: Image represents a container's image.
+                  properties:
+                    name:
+                      type: string
+                    pullPolicy:
+                      type: string
+                  required:
+                  - name
+                  - pullPolicy
+                  type: object
+                proxyInitImage:
+                  description: Image represents a container's image.
+                  properties:
+                    name:
+                      type: string
+                    pullPolicy:
+                      type: string
+                  required:
+                  - name
+                  - pullPolicy
+                  type: object
+                proxyInitImageVersion:
+                  type: string
+                proxyUID:
+                  format: int64
+                  type: integer
+                proxyVersion:
+                  type: string
+                resource:
+                  description: Resources represents the resource requests and limits
+                    requirements of a container.
+                  properties:
+                    limits:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    requests:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  type: object
+              required:
+              - adminPort
+              - controlPort
+              - disableExternalProfiles
+              - inboundPort
+              - logLevel
+              - outboundPort
+              - proxyImage
+              - proxyInitImage
+              - proxyInitImageVersion
+              - proxyUID
+              - proxyVersion
+              - resource
+              type: object
+          required:
+          - global
+          - proxy
+          type: object
+        status:
+          description: LinkerdConfigStatus defines the observed state of LinkerdConfig
+          properties:
+            injected:
+              description: A list of pointers to injected workloads
+              items:
+                description: ObjectReference contains enough information to let you
+                  inspect or modify the referred object.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: 'If referring to a piece of an object instead of
+                      an entire object, this string should contain a valid JSON/Go
+                      field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within
+                      a pod, this would take on a value like: "spec.containers{name}"
+                      (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]"
+                      (container with index 2 in this pod). This syntax is chosen
+                      only to have some well-defined way of referencing a part of
+                      an object. TODO: this design is not final and this field is
+                      subject to change in the future.'
+                    type: string
+                  kind:
+                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    type: string
+                  resourceVersion:
+                    description: 'Specific resourceVersion to which this reference
+                      is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    type: string
+                  uid:
+                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+                type: object
+              type: array
+            uninjected:
+              description: A list of pointers to uninjected workloads
+              items:
+                description: ObjectReference contains enough information to let you
+                  inspect or modify the referred object.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: 'If referring to a piece of an object instead of
+                      an entire object, this string should contain a valid JSON/Go
+                      field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within
+                      a pod, this would take on a value like: "spec.containers{name}"
+                      (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]"
+                      (container with index 2 in this pod). This syntax is chosen
+                      only to have some well-defined way of referencing a part of
+                      an object. TODO: this design is not final and this field is
+                      subject to change in the future.'
+                    type: string
+                  kind:
+                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    type: string
+                  resourceVersion:
+                    description: 'Specific resourceVersion to which this reference
+                      is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    type: string
+                  uid:
+                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+                type: object
+              type: array
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

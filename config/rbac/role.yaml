@@ -1,0 +1,39 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - config.linkerd.io
+  resources:
+  - linkerdconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - config.linkerd.io
+  resources:
+  - linkerdconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
