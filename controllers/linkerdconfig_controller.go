@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -26,6 +27,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ref "k8s.io/client-go/tools/reference"
@@ -61,7 +63,6 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	if err := r.Get(ctx, req.NamespacedName, &config); err != nil {
 		return ctrl.Result{}, ignoreNotFound(err)
 	}
-	log.V(1).Info("found the custom resource")
 
 	var (
 		configmap      corev1.ConfigMap
@@ -75,8 +76,13 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		if err := r.Get(ctx, namespacedName, &configmap); err != nil {
 			if apierrs.IsNotFound(err) {
 				createConfigCM = true
-				configmap.ObjectMeta.Namespace = namespacedName.Namespace
-				configmap.ObjectMeta.Name = namespacedName.Name
+				configmap = corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespacedName.Namespace,
+						Name:      namespacedName.Name,
+					},
+					Data: map[string]string{},
+				}
 				return nil
 			}
 
@@ -87,7 +93,7 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	if err := fetchConfigMap(); err != nil {
-		log.Error(err, "fail to create configmap")
+		log.Error(err, "fail to retrieve configmap")
 		return ctrl.Result{}, err
 	}
 
@@ -108,13 +114,14 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	go func() {
 		defer wait.Done()
 
-		log.V(1).Info("attempting to reconcile and update the configmap")
-		if err := r.reconcileConfigMap(&config, &configmap); err != nil {
+		log.Info("attempting to reconcile the configmap")
+		if err := r.reconcileConfigMap(&config, &configmap, log); err != nil {
 			errChan <- err
 			return
 		}
 
 		if createConfigCM {
+			log.Info("created new configmap", "name", configmap.ObjectMeta.Name, "namespace", configmap.ObjectMeta.Namespace)
 			if err := r.Create(ctx, &configmap); err != nil {
 				log.Error(err, "fail to create the configmap")
 				errChan <- err
@@ -132,15 +139,15 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			log.Error(err, "fail to update the configmap")
 			errChan <- err
 		}
-		log.V(1).Info("successfully reconciled and updated the configmap")
+		log.Info("successfully reconciled configmap")
 	}()
 
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
 
-		log.V(1).Info("attempting to reconcile and update the custom resource")
-		if err := r.reconcileStatus(ctx, &config); err != nil {
+		log.Info("attempting to reconcile custom resource status")
+		if err := r.reconcileStatus(ctx, &config, log); err != nil {
 			errChan <- err
 			return
 		}
@@ -149,7 +156,7 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			errChan <- err
 			return
 		}
-		log.V(1).Info("successfullly reconciled and updated the custom resource")
+		log.Info("successfullly reconciled custom resource status")
 	}()
 
 	wait.Wait()
@@ -166,7 +173,7 @@ func (r *LinkerdConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&configv1alpha1.LinkerdConfig{}).
 		Owns(&corev1.ConfigMap{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		WithEventFilter(predicate.ResourceVersionChangedPredicate{}).
 		Complete(r)
 }
 
@@ -178,7 +185,7 @@ func ignoreNotFound(err error) error {
 	return err
 }
 
-func (r *LinkerdConfigReconciler) reconcileConfigMap(config *v1alpha1.LinkerdConfig, configmap *corev1.ConfigMap) error {
+func (r *LinkerdConfigReconciler) reconcileConfigMap(config *v1alpha1.LinkerdConfig, configmap *corev1.ConfigMap, log logr.Logger) error {
 	if err := ctrl.SetControllerReference(config, configmap, r.Scheme); err != nil {
 		cast, ok := err.(*controllerutil.AlreadyOwnedError)
 		if !ok { // return original error as-is
@@ -190,10 +197,29 @@ func (r *LinkerdConfigReconciler) reconcileConfigMap(config *v1alpha1.LinkerdCon
 		}
 	}
 
+	reconcileData := func(dataKey string, spec interface{}) error {
+		desiredConfig, err := json.Marshal(spec)
+		if err != nil {
+			return err
+		}
+
+		configmap.Data[dataKey] = string(desiredConfig)
+		log.V(1).Info("successfully reconciled configmap data", "key", dataKey)
+		return nil
+	}
+
+	if err := reconcileData("global", config.Spec.Global); err != nil {
+		return err
+	}
+
+	if err := reconcileData("proxy", config.Spec.Proxy); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (r *LinkerdConfigReconciler) reconcileStatus(ctx context.Context, config *v1alpha1.LinkerdConfig) error {
+func (r *LinkerdConfigReconciler) reconcileStatus(ctx context.Context, config *v1alpha1.LinkerdConfig, log logr.Logger) error {
 	const (
 		listQueryLimitPod           = 100
 		listQueryLimitContinueToken = "l5d-list-pods-continue"
@@ -245,6 +271,7 @@ func (r *LinkerdConfigReconciler) reconcileStatus(ctx context.Context, config *v
 	if err := r.List(ctx, &pods, opts); ignoreNotFound(err) != nil {
 		return err
 	}
+	log.V(1).Info("found pods", "total", len(pods.Items))
 
 	for _, pod := range pods.Items {
 		if !isRunning(pod) {
