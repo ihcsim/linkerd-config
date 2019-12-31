@@ -78,15 +78,10 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 				createConfigMap = true
 				configmap = corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespacedName.Namespace,
-						Name:      namespacedName.Name,
-						Annotations: map[string]string{
-							annotationCreatedBy: fmt.Sprintf("linkerd/reconciler %s", config.Spec.Global.Version),
-						},
-						Labels: map[string]string{
-							labelControlPlaneComponent: "controller",
-							labelControlPlaneNamespace: config.Spec.Global.LinkerdNamespace,
-						},
+						Namespace:   namespacedName.Namespace,
+						Name:        namespacedName.Name,
+						Annotations: annotations(fmt.Sprintf("linkerd/reconciler %s", config.Spec.Global.Version)),
+						Labels:      labels(config.Spec.Global.LinkerdNamespace),
 					},
 					Data: map[string]string{},
 				}

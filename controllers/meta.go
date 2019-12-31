@@ -1,7 +1,14 @@
 package controllers
 
-const (
-	labelControlPlaneComponent = "linkerd.io/control-plane-component"
-	labelControlPlaneNamespace = "linkerd.io/control-plane-ns"
-	annotationCreatedBy        = "linkerd.io/created-by"
-)
+func annotations(createdBy string) map[string]string {
+	return map[string]string{
+		"linkerd.io/created-by": createdBy,
+	}
+}
+
+func labels(namespace string) map[string]string {
+	return map[string]string{
+		"linkerd.io/control-plane-component": "controller",
+		"linkerd.io/control-plane-ns":        namespace,
+	}
+}
