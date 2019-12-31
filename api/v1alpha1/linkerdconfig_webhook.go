@@ -49,7 +49,7 @@ func (r *LinkerdConfig) Default() {
 	}
 
 	if r.Spec.Global.ConfigMap == "" {
-		r.Spec.Global.ConfigMap = "linkerd-config2"
+		r.Spec.Global.ConfigMap = "linkerd-config"
 	}
 
 	if r.Spec.Global.IdentityContext.TrustDomain == "" {
