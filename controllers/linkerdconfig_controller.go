@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apilabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ref "k8s.io/client-go/tools/reference"
@@ -49,7 +50,8 @@ type LinkerdConfigReconciler struct {
 
 // +kubebuilder:rbac:groups=config.linkerd.io,resources=linkerdconfigs,verbs=get;list;watch;update
 // +kubebuilder:rbac:groups=config.linkerd.io,resources=linkerdconfigs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources="pods",verbs=get;list;watch;delete
+// +kubebuilder:rbac:groups="",resources="pods",verbs=get;list;watch;delete;deletecollection
+// +kubebuilder:rbac:groups="",resources="namespaces",verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources="configmaps",verbs=get;create;update;list;watch
 
 func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -142,6 +144,11 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			errChan <- err
 		}
 		log.Info("successfully reconciled configmap")
+
+		if err := r.restartPods(ctx, log); err != nil {
+			log.Error(err, "fail to restart some pods")
+			errChan <- err
+		}
 	}()
 
 	wait.Add(1)
@@ -306,6 +313,52 @@ func (r *LinkerdConfigReconciler) reconcileStatus(ctx context.Context, config *v
 		}
 
 		config.Status.Uninjected = addIfMissing(config.Status.Uninjected, *podRef)
+	}
+
+	return nil
+}
+
+func (r *LinkerdConfigReconciler) restartPods(ctx context.Context, log logr.Logger) error {
+
+	// find all namespaces without the config.linkerd.io/admission-webooks=disabled label
+	var (
+		namespaces   corev1.NamespaceList
+		nsListOption client.ListOptions
+	)
+	nsListSelector, err := apilabels.Parse(fmt.Sprintf("%s != %s", linkerdOptOutLabel, linkerdOptOutModeDisabled))
+	if err != nil {
+		return err
+	}
+	nsListOption.LabelSelector = nsListSelector
+	if err := r.List(ctx, &namespaces, &nsListOption); err != nil {
+		return err
+	}
+
+	var errs []error
+	selector, err := apilabels.Parse(fmt.Sprintf("%s = %s", proxyReconcileLabel, proxyReconcileModeAuto))
+	if err != nil {
+		return err
+	}
+	for _, namespace := range namespaces.Items {
+		log.V(1).Info("looking for opt-in pods to be restarted", "namespace", namespace.Name)
+		option := client.DeleteAllOfOptions{
+			ListOptions: client.ListOptions{
+				Namespace:     namespace.Name,
+				LabelSelector: selector,
+			},
+		}
+
+		if err := r.DeleteAllOf(ctx, &corev1.Pod{}, &option); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		var combined error
+		for _, err := range errs {
+			combined = fmt.Errorf("%s,%s", combined, err)
+		}
+		return combined
 	}
 
 	return nil
