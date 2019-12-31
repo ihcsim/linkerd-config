@@ -112,6 +112,10 @@ func (r *LinkerdConfig) Default() {
 		r.Spec.Proxy.ProxyUID = 2102
 	}
 
+	if r.Spec.Proxy.Resource.Limits == nil {
+		r.Spec.Proxy.Resource.Limits = map[string]string{}
+	}
+
 	if r.Spec.Proxy.Resource.Limits["cpu"] == "" {
 		r.Spec.Proxy.Resource.Limits["cpu"] = "1"
 	}
@@ -120,12 +124,24 @@ func (r *LinkerdConfig) Default() {
 		r.Spec.Proxy.Resource.Limits["memory"] = "250Mi"
 	}
 
+	if r.Spec.Proxy.Resource.Requests == nil {
+		r.Spec.Proxy.Resource.Requests = map[string]string{}
+	}
+
 	if r.Spec.Proxy.Resource.Requests["cpu"] == "" {
 		r.Spec.Proxy.Resource.Requests["cpu"] = "100m"
 	}
 
 	if r.Spec.Proxy.Resource.Requests["memory"] == "" {
 		r.Spec.Proxy.Resource.Requests["memory"] = "20Mi"
+	}
+
+	if r.Spec.Proxy.IgnoreInboundPorts == nil {
+		r.Spec.Proxy.IgnoreInboundPorts = Ports{}
+	}
+
+	if r.Spec.Proxy.IgnoreOutboundPorts == nil {
+		r.Spec.Proxy.IgnoreOutboundPorts = Ports{}
 	}
 }
 
@@ -175,10 +191,14 @@ func (r *LinkerdConfig) validate() error {
 		errors = append(errors, field.Required(path, "proxy-init image version must be provided"))
 	}
 
-	return apierrors.NewInvalid(
-		schema.GroupKind{
-			Group: GroupVersion.Group,
-			Kind:  "LinkerdConfig"},
-		r.Name, errors,
-	)
+	if len(errors) > 0 {
+		return apierrors.NewInvalid(
+			schema.GroupKind{
+				Group: GroupVersion.Group,
+				Kind:  "LinkerdConfig"},
+			r.Name, errors,
+		)
+	}
+
+	return nil
 }

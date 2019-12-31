@@ -47,10 +47,10 @@ type LinkerdConfigReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=config.linkerd.io,resources=linkerdconfigs,verbs=get;list;watch
+// +kubebuilder:rbac:groups=config.linkerd.io,resources=linkerdconfigs,verbs=get;list;watch;update
 // +kubebuilder:rbac:groups=config.linkerd.io,resources=linkerdconfigs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources="pods",verbs=get;list
-// +kubebuilder:rbac:groups="",resources="configmaps",verbs=get;create;update
+// +kubebuilder:rbac:groups="",resources="pods",verbs=get;list;watch;delete
+// +kubebuilder:rbac:groups="",resources="configmaps",verbs=get;create;update;list;watch
 
 func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var (

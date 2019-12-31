@@ -104,10 +104,10 @@ type Proxy struct {
 	Resource                Resources `json:"resource"`
 
 	//+kubebuilder:validation:Optional
-	IgnoreInboundPorts Ports `json:"ignoreInboundPorts"`
+	IgnoreInboundPorts Ports `json:"ignoreInboundPorts,omitEmpty"`
 
 	//+kubebuilder:validation:Optional
-	IgnoreOutboundPorts Ports `json:"ignoreOutboundPorts"`
+	IgnoreOutboundPorts Ports `json:"ignoreOutboundPorts,omitempty"`
 }
 
 // Image represents a container's image.
