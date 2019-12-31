@@ -79,6 +79,22 @@ else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
+clean:
+	kubectl -n linkerd delete all -l controllers.linkerd.io=linkerd-config
+	kubectl -n linkerd delete role,rolebinding -l controllers.linkerd.io=linkerd-config
+	kubectl delete clusterrole,clusterrolebinding  -l controllers.linkerd.io=linkerd-config
+	kubectl delete mutatingwebhookconfiguration,validatingwebhookconfiguration -l controllers.linkerd.io=linkerd-config
+
+purge: clean
+	kubectl delete ns cert-manager
+	linkerd install --ignore-cluster | kubectl delete -f -
+
+linkerd:
+	linkerd install | kubectl apply -f -
+
 cert-manager:
 	kubectl create ns cert-manager
 	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml
+
+emojivoto:
+	linkerd inject https://run.linkerd.io/emojivoto.yml | kubectl apply -f -
