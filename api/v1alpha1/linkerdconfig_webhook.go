@@ -16,7 +16,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -41,7 +44,89 @@ var _ webhook.Defaulter = &LinkerdConfig{}
 func (r *LinkerdConfig) Default() {
 	linkerdconfiglog.Info("default", "name", r.Name)
 
-	// TODO(user): fill in your defaulting logic.
+	if r.Spec.Global.ClusterDomain == "" {
+		r.Spec.Global.ClusterDomain = "cluster.local"
+	}
+
+	if r.Spec.Global.ConfigMap == "" {
+		r.Spec.Global.ConfigMap = "linkerd-config2"
+	}
+
+	if r.Spec.Global.IdentityContext.TrustDomain == "" {
+		r.Spec.Global.IdentityContext.TrustDomain = "cluster.local"
+	}
+
+	if r.Spec.Global.IdentityContext.IssuanceLifeTime == "" {
+		r.Spec.Global.IdentityContext.IssuanceLifeTime = "86400s"
+	}
+
+	if r.Spec.Global.IdentityContext.ClockSkewAllowance == "" {
+		r.Spec.Global.IdentityContext.ClockSkewAllowance = "20s"
+	}
+
+	if r.Spec.Global.IdentityContext.Scheme == "" {
+		r.Spec.Global.IdentityContext.Scheme = "linkerd.io/tls"
+	}
+
+	if r.Spec.Global.LinkerdNamespace == "" {
+		r.Spec.Global.LinkerdNamespace = "linkerd"
+	}
+
+	if r.Spec.Proxy.AdminPort.empty() {
+		r.Spec.Proxy.AdminPort = Port(4191)
+	}
+
+	if r.Spec.Proxy.ControlPort.empty() {
+		r.Spec.Proxy.ControlPort = Port(4190)
+	}
+
+	if r.Spec.Proxy.InboundPort.empty() {
+		r.Spec.Proxy.InboundPort = Port(4143)
+	}
+
+	if r.Spec.Proxy.LogLevel == "" {
+		r.Spec.Proxy.LogLevel = "warn,linkerd2_proxy=info"
+	}
+
+	if r.Spec.Proxy.OutboundPort.empty() {
+		r.Spec.Proxy.OutboundPort = Port(4140)
+	}
+
+	if r.Spec.Proxy.ProxyImage.Name == "" {
+		r.Spec.Proxy.ProxyImage.Name = "gcr.io/linkerd-io/proxy"
+	}
+
+	if r.Spec.Proxy.ProxyImage.PullPolicy == "" {
+		r.Spec.Proxy.ProxyImage.Name = "IfNotPresent"
+	}
+
+	if r.Spec.Proxy.ProxyInitImage.Name == "" {
+		r.Spec.Proxy.ProxyInitImage.Name = "gcr.io/linkerd-io/proxy"
+	}
+
+	if r.Spec.Proxy.ProxyInitImage.PullPolicy == "" {
+		r.Spec.Proxy.ProxyInitImage.Name = "IfNotPresent"
+	}
+
+	if r.Spec.Proxy.ProxyUID == 0 {
+		r.Spec.Proxy.ProxyUID = 2102
+	}
+
+	if r.Spec.Proxy.Resource.Limits["cpu"] == "" {
+		r.Spec.Proxy.Resource.Limits["cpu"] = "1"
+	}
+
+	if r.Spec.Proxy.Resource.Limits["memory"] == "" {
+		r.Spec.Proxy.Resource.Limits["memory"] = "250Mi"
+	}
+
+	if r.Spec.Proxy.Resource.Requests["cpu"] == "" {
+		r.Spec.Proxy.Resource.Requests["cpu"] = "100m"
+	}
+
+	if r.Spec.Proxy.Resource.Requests["memory"] == "" {
+		r.Spec.Proxy.Resource.Requests["memory"] = "20Mi"
+	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -52,17 +137,13 @@ var _ webhook.Validator = &LinkerdConfig{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *LinkerdConfig) ValidateCreate() error {
 	linkerdconfiglog.Info("validate create", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object creation.
-	return nil
+	return r.validate()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *LinkerdConfig) ValidateUpdate(old runtime.Object) error {
 	linkerdconfiglog.Info("validate update", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object update.
-	return nil
+	return r.validate()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
@@ -71,4 +152,33 @@ func (r *LinkerdConfig) ValidateDelete() error {
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
+}
+
+func (r *LinkerdConfig) validate() error {
+	var (
+		errors field.ErrorList
+		root   = field.NewPath("spec")
+	)
+
+	if r.Spec.Global.IdentityContext.TrustAnchorsPEM == "" {
+		path := root.Child("global", "identityContext", "trustAnchorsPEM")
+		errors = append(errors, field.Required(path, "trust anchors must be provided"))
+	}
+
+	if r.Spec.Proxy.ProxyVersion == "" {
+		path := root.Child("proxy", "proxyVersion")
+		errors = append(errors, field.Required(path, "proxy image version must be provided"))
+	}
+
+	if r.Spec.Proxy.ProxyInitImageVersion == "" {
+		path := root.Child("proxy", "proxyInitImageVersion")
+		errors = append(errors, field.Required(path, "proxy-init image version must be provided"))
+	}
+
+	return apierrors.NewInvalid(
+		schema.GroupKind{
+			Group: GroupVersion.Group,
+			Kind:  "LinkerdConfig"},
+		r.Name, errors,
+	)
 }

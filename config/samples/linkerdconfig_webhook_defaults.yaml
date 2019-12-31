@@ -1,0 +1,4 @@
+apiVersion: config.linkerd.io/v1alpha1
+kind: LinkerdConfig
+metadata:
+  name: linkerd-config
