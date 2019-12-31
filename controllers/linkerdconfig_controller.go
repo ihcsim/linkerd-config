@@ -65,8 +65,8 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	var (
-		configmap      corev1.ConfigMap
-		createConfigCM bool
+		configmap       corev1.ConfigMap
+		createConfigMap bool
 	)
 	fetchConfigMap := func() error {
 		namespacedName := types.NamespacedName{
@@ -75,11 +75,18 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		}
 		if err := r.Get(ctx, namespacedName, &configmap); err != nil {
 			if apierrs.IsNotFound(err) {
-				createConfigCM = true
+				createConfigMap = true
 				configmap = corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: namespacedName.Namespace,
 						Name:      namespacedName.Name,
+						Annotations: map[string]string{
+							annotationCreatedBy: fmt.Sprintf("linkerd/reconciler %s", config.Spec.Global.Version),
+						},
+						Labels: map[string]string{
+							labelControlPlaneComponent: "controller",
+							labelControlPlaneNamespace: config.Spec.Global.LinkerdNamespace,
+						},
 					},
 					Data: map[string]string{},
 				}
@@ -120,7 +127,7 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			return
 		}
 
-		if createConfigCM {
+		if createConfigMap {
 			log.Info("created new configmap", "name", configmap.ObjectMeta.Name, "namespace", configmap.ObjectMeta.Namespace)
 			if err := r.Create(ctx, &configmap); err != nil {
 				log.Error(err, "fail to create the configmap")
@@ -186,6 +193,8 @@ func ignoreNotFound(err error) error {
 }
 
 func (r *LinkerdConfigReconciler) reconcileConfigMap(config *v1alpha1.LinkerdConfig, configmap *corev1.ConfigMap, log logr.Logger) error {
+	// update the configmap's ownerRef to point to the custom resource, making
+	// the custom resource its owner.
 	if err := ctrl.SetControllerReference(config, configmap, r.Scheme); err != nil {
 		cast, ok := err.(*controllerutil.AlreadyOwnedError)
 		if !ok { // return original error as-is
@@ -197,6 +206,7 @@ func (r *LinkerdConfigReconciler) reconcileConfigMap(config *v1alpha1.LinkerdCon
 		}
 	}
 
+	// reconcile the 'global' and 'proxy' data.
 	reconcileData := func(dataKey string, spec interface{}) error {
 		desiredConfig, err := json.Marshal(spec)
 		if err != nil {
