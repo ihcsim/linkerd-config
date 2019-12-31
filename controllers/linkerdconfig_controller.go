@@ -208,12 +208,24 @@ func (r *LinkerdConfigReconciler) reconcileConfigMap(config *v1alpha1.LinkerdCon
 		return nil
 	}
 
-	if err := reconcileData("global", config.Spec.Global); err != nil {
+	const (
+		keyGlobal = "global"
+		keyProxy  = "proxy"
+	)
+
+	if err := reconcileData(keyGlobal, config.Spec.Global); err != nil {
 		return err
 	}
 
-	if err := reconcileData("proxy", config.Spec.Proxy); err != nil {
+	if err := reconcileData(keyProxy, config.Spec.Proxy); err != nil {
 		return err
+	}
+
+	// remove all unexpected keys
+	for key := range configmap.Data {
+		if key != keyGlobal && key != keyProxy {
+			delete(configmap.Data, key)
+		}
 	}
 
 	return nil
