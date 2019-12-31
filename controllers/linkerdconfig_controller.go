@@ -31,6 +31,7 @@ import (
 	apilabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ref "k8s.io/client-go/tools/reference"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,6 +45,7 @@ import (
 // LinkerdConfigReconciler reconciles a LinkerdConfig object
 type LinkerdConfigReconciler struct {
 	client.Client
+	record.EventRecorder
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
@@ -53,6 +55,7 @@ type LinkerdConfigReconciler struct {
 // +kubebuilder:rbac:groups="",resources="pods",verbs=get;list;watch;delete;deletecollection
 // +kubebuilder:rbac:groups="",resources="namespaces",verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources="configmaps",verbs=get;create;update;list;watch
+// +kubebuilder:rbac:groups="",resources="events",verbs=create;patch
 
 func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var (
@@ -145,10 +148,17 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		}
 		log.Info("successfully reconciled configmap")
 
-		if err := r.restartPods(ctx, log); err != nil {
-			log.Error(err, "fail to restart some pods")
-			errChan <- err
-		}
+		go func() {
+			restarted, err := r.restartPods(ctx, log)
+			if err != nil {
+				log.Error(err, "fail to restart some pods")
+				errChan <- err
+			}
+
+			for _, namespace := range restarted.Items {
+				r.Eventf(&config, corev1.EventTypeNormal, EventPodRestart, "restarted opt-in pods in %s", namespace.Name)
+			}
+		}()
 	}()
 
 	wait.Add(1)
@@ -175,6 +185,7 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return ctrl.Result{}, err
 	}
 
+	r.Eventf(&config, corev1.EventTypeNormal, EventLinkerdConfigUpdated, "successfully sync LinkerdConfig '%s' with configmap '%s'", req.NamespacedName.Name, configmap.Name)
 	return ctrl.Result{}, nil
 }
 
@@ -318,8 +329,7 @@ func (r *LinkerdConfigReconciler) reconcileStatus(ctx context.Context, config *v
 	return nil
 }
 
-func (r *LinkerdConfigReconciler) restartPods(ctx context.Context, log logr.Logger) error {
-
+func (r *LinkerdConfigReconciler) restartPods(ctx context.Context, log logr.Logger) (corev1.NamespaceList, error) {
 	// find all namespaces without the config.linkerd.io/admission-webooks=disabled label
 	var (
 		namespaces   corev1.NamespaceList
@@ -327,17 +337,17 @@ func (r *LinkerdConfigReconciler) restartPods(ctx context.Context, log logr.Logg
 	)
 	nsListSelector, err := apilabels.Parse(fmt.Sprintf("%s != %s", linkerdOptOutLabel, linkerdOptOutModeDisabled))
 	if err != nil {
-		return err
+		return namespaces, err
 	}
 	nsListOption.LabelSelector = nsListSelector
 	if err := r.List(ctx, &namespaces, &nsListOption); err != nil {
-		return err
+		return namespaces, err
 	}
 
 	var errs []error
 	selector, err := apilabels.Parse(fmt.Sprintf("%s = %s", proxyReconcileLabel, proxyReconcileModeAuto))
 	if err != nil {
-		return err
+		return namespaces, err
 	}
 	for _, namespace := range namespaces.Items {
 		log.V(1).Info("looking for opt-in pods to be restarted", "namespace", namespace.Name)
@@ -358,8 +368,9 @@ func (r *LinkerdConfigReconciler) restartPods(ctx context.Context, log logr.Logg
 		for _, err := range errs {
 			combined = fmt.Errorf("%s,%s", combined, err)
 		}
-		return combined
+
+		return namespaces, combined
 	}
 
-	return nil
+	return namespaces, nil
 }

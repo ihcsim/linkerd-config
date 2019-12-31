@@ -65,9 +65,10 @@ func main() {
 	}
 
 	if err = (&controllers.LinkerdConfigReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("LinkerdConfig"),
-		Scheme: mgr.GetScheme(),
+		Client:        mgr.GetClient(),
+		EventRecorder: mgr.GetEventRecorderFor("LinkerdConfig"),
+		Log:           ctrl.Log.WithName("controllers").WithName("LinkerdConfig"),
+		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinkerdConfig")
 		os.Exit(1)

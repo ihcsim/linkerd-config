@@ -90,10 +90,12 @@ purge: clean
 	linkerd install --ignore-cluster | kubectl delete -f -
 
 linkerd:
+	kubectl label ns kube-system config.linkerd.io/admission-webhooks=disabled
 	linkerd install | kubectl apply -f -
 
 cert-manager:
 	kubectl create ns cert-manager
+	kubectl label ns cert-manager config.linkerd.io/admission-webhooks=disabled
 	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml
 
 emojivoto:
