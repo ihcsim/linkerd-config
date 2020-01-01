@@ -8,6 +8,13 @@ metadata:
   creationTimestamp: null
   name: linkerdconfigs.config.linkerd.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.global.linkerdNamespace
+    name: Control Plane Namespace
+    type: string
+  - JSONPath: .spec.global.configMap
+    name: ConfigMap
+    type: string
   group: config.linkerd.io
   names:
     kind: LinkerdConfig

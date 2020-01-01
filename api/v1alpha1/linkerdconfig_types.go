@@ -49,6 +49,8 @@ type LinkerdConfigStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Control Plane Namespace",type=string,JSONPath=`.spec.global.linkerdNamespace`
+// +kubebuilder:printcolumn:name="ConfigMap",type=string,JSONPath=`.spec.global.configMap`
 
 // LinkerdConfig is the Schema for the linkerdconfigs API
 type LinkerdConfig struct {
