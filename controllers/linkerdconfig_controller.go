@@ -26,11 +26,9 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apilabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ref "k8s.io/client-go/tools/reference"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -70,39 +68,14 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	var (
-		configmap       corev1.ConfigMap
-		createConfigMap bool
-	)
-	fetchConfigMap := func() error {
-		namespacedName := types.NamespacedName{
-			Namespace: config.Spec.Global.LinkerdNamespace,
-			Name:      config.Spec.Global.ConfigMap,
-		}
-		if err := r.Get(ctx, namespacedName, &configmap); err != nil {
-			if apierrs.IsNotFound(err) {
-				createConfigMap = true
-				configmap = corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:   namespacedName.Namespace,
-						Name:        namespacedName.Name,
-						Annotations: annotations(fmt.Sprintf("linkerd/reconciler %s", config.Spec.Global.Version)),
-						Labels:      labels(config.Spec.Global.LinkerdNamespace),
-					},
-					Data: map[string]string{},
-				}
-				return nil
-			}
-
-			return err
-		}
-
-		return nil
-	}
-
-	if err := fetchConfigMap(); err != nil {
-		log.Error(err, "fail to retrieve configmap")
-		return ctrl.Result{}, err
+	configmap := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   config.Spec.Global.LinkerdNamespace,
+			Name:        config.Spec.Global.ConfigMap,
+			Annotations: annotations(fmt.Sprintf("linkerd/reconciler %s", config.Spec.Global.Version)),
+			Labels:      labels(config.Spec.Global.LinkerdNamespace),
+		},
+		Data: map[string]string{},
 	}
 
 	var (
@@ -122,32 +95,20 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	go func() {
 		defer wait.Done()
 
+		// attempt to reconcile the configmap.
+		// create it if it's missing. otherwise, update it.
+		// then restart all opt-in pods.
+
 		log.Info("attempting to reconcile the configmap")
-		if err := r.reconcileConfigMap(&config, &configmap, log); err != nil {
+		reconcileConfigMap := func() error {
+			return r.reconcileConfigMap(ctx, &config, &configmap, log)
+		}
+		result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &configmap, reconcileConfigMap)
+		if err != nil {
 			errChan <- err
 			return
 		}
-
-		if createConfigMap {
-			log.Info("created new configmap", "name", configmap.ObjectMeta.Name, "namespace", configmap.ObjectMeta.Namespace)
-			if err := r.Create(ctx, &configmap); err != nil {
-				log.Error(err, "fail to create the configmap")
-				errChan <- err
-				return
-			}
-
-			if err := r.Update(ctx, &config); err != nil {
-				errChan <- err
-			}
-
-			return
-		}
-
-		if err := r.Update(ctx, &configmap); err != nil {
-			log.Error(err, "fail to update the configmap")
-			errChan <- err
-		}
-		log.Info("successfully reconciled configmap")
+		log.Info("successfully reconciled configmap", "result", result)
 
 		go func() {
 			restarted, err := r.restartPods(ctx, log)
@@ -165,6 +126,9 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
+
+		// attempt to reconcile the LinkerdConfig resource.
+		// update its status to reflect the state of the world.
 
 		log.Info("attempting to reconcile custom resource status")
 		if err := r.reconcileStatus(ctx, &config, log); err != nil {
@@ -215,7 +179,7 @@ func (r *LinkerdConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *LinkerdConfigReconciler) reconcileConfigMap(config *v1alpha1.LinkerdConfig, configmap *corev1.ConfigMap, log logr.Logger) error {
+func (r *LinkerdConfigReconciler) reconcileConfigMap(ctx context.Context, config *v1alpha1.LinkerdConfig, configmap *corev1.ConfigMap, log logr.Logger) error {
 	// update the configmap's ownerRef to point to the custom resource, making
 	// the custom resource its owner.
 	if err := ctrl.SetControllerReference(config, configmap, r.Scheme); err != nil {
