@@ -67,7 +67,7 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 
 	var config configv1alpha1.LinkerdConfig
 	if err := r.Get(ctx, req.NamespacedName, &config); err != nil {
-		return ctrl.Result{}, ignoreNotFound(err)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	var (
@@ -215,14 +215,6 @@ func (r *LinkerdConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func ignoreNotFound(err error) error {
-	if apierrs.IsNotFound(err) {
-		return nil
-	}
-
-	return err
-}
-
 func (r *LinkerdConfigReconciler) reconcileConfigMap(config *v1alpha1.LinkerdConfig, configmap *corev1.ConfigMap, log logr.Logger) error {
 	// update the configmap's ownerRef to point to the custom resource, making
 	// the custom resource its owner.
@@ -318,7 +310,7 @@ func (r *LinkerdConfigReconciler) reconcileStatus(ctx context.Context, config *v
 			client.MatchingFields{r.indexFieldPodPhase: string(corev1.PodRunning)},
 		}
 	)
-	if err := r.List(ctx, &pods, opts...); ignoreNotFound(err) != nil {
+	if err := r.List(ctx, &pods, opts...); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 	log.V(1).Info("found running pods", "total", len(pods.Items))
