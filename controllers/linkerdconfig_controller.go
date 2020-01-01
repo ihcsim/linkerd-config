@@ -46,8 +46,9 @@ import (
 type LinkerdConfigReconciler struct {
 	client.Client
 	record.EventRecorder
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log                logr.Logger
+	Scheme             *runtime.Scheme
+	indexFieldPodPhase string
 }
 
 // +kubebuilder:rbac:groups=config.linkerd.io,resources=linkerdconfigs,verbs=get;list;watch;update
@@ -190,6 +191,23 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 }
 
 func (r *LinkerdConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// set up an index to allow us to list pods by their pod phase field.
+	// the client will use the r.indexFieldPodPhase as the index key.
+	// see https://godoc.org/sigs.k8s.io/controller-runtime/pkg/client#FieldIndexer
+	// and https://github.com/kubernetes-sigs/kubebuilder/blob/master/docs/book/src/cronjob-tutorial/testdata/project/controllers/cronjob_controller.go
+	r.indexFieldPodPhase = ".status.phase"
+	indexerFunc := func(obj runtime.Object) []string {
+		pod, ok := obj.(*corev1.Pod)
+		if !ok {
+			return nil
+		}
+
+		return []string{string(pod.Status.Phase)}
+	}
+	if err := mgr.GetFieldIndexer().IndexField(&corev1.Pod{}, r.indexFieldPodPhase, indexerFunc); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&configv1alpha1.LinkerdConfig{}).
 		Owns(&corev1.ConfigMap{}).
@@ -276,10 +294,6 @@ func (r *LinkerdConfigReconciler) reconcileStatus(ctx context.Context, config *v
 		return objRefs
 	}
 
-	isRunning := func(pod corev1.Pod) bool {
-		return pod.Status.Phase == corev1.PodRunning
-	}
-
 	hasProxy := func(pod corev1.Pod) bool {
 		const proxyName = "linkerd-proxy"
 
@@ -298,21 +312,18 @@ func (r *LinkerdConfigReconciler) reconcileStatus(ctx context.Context, config *v
 
 	var (
 		pods = corev1.PodList{}
-		opts = &client.ListOptions{
-			Limit:    listQueryLimitPod,
-			Continue: fmt.Sprintf("%s-%d", listQueryLimitContinueToken, time.Now().Second()),
+		opts = []client.ListOption{
+			client.Limit(listQueryLimitPod),
+			client.Continue(fmt.Sprintf("%s-%d", listQueryLimitContinueToken, time.Now().Second())),
+			client.MatchingFields{r.indexFieldPodPhase: string(corev1.PodRunning)},
 		}
 	)
-	if err := r.List(ctx, &pods, opts); ignoreNotFound(err) != nil {
+	if err := r.List(ctx, &pods, opts...); ignoreNotFound(err) != nil {
 		return err
 	}
-	log.V(1).Info("found pods", "total", len(pods.Items))
+	log.V(1).Info("found running pods", "total", len(pods.Items))
 
 	for _, pod := range pods.Items {
-		if !isRunning(pod) {
-			continue
-		}
-
 		podRef, err := ref.GetReference(r.Scheme, &pod)
 		if err != nil {
 			continue
