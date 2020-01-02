@@ -19,8 +19,8 @@ import (
 	"flag"
 	"os"
 
-	configv1alpha1 "github.com/linkerd/linkerd-config/api/v1alpha1"
-	"github.com/linkerd/linkerd-config/controllers"
+	configv1alpha1 "github.com/ihcsim/linkerd-config/api/v1alpha1"
+	"github.com/ihcsim/linkerd-config/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"

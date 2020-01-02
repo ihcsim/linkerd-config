@@ -1,5 +1,5 @@
 domain: linkerd.io
-repo: github.com/linkerd/linkerd-config
+repo: github.com/ihcsim/linkerd-config
 resources:
 - group: config
   kind: LinkerdConfig

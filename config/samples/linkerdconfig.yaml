@@ -6,7 +6,7 @@ spec:
   global:
     clusterDomain: cluster.local
     cniEnabled: false
-    configMap: linkerd-config2
+    configMap: linkerd-config
     identityContext:
       trustDomain: cluster.local
       trustAnchorsPEM: |

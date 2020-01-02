@@ -135,14 +135,6 @@ func (r *LinkerdConfig) Default() {
 	if r.Spec.Proxy.Resource.Requests["memory"] == "" {
 		r.Spec.Proxy.Resource.Requests["memory"] = "20Mi"
 	}
-
-	if r.Spec.Proxy.IgnoreInboundPorts == nil {
-		r.Spec.Proxy.IgnoreInboundPorts = Ports{}
-	}
-
-	if r.Spec.Proxy.IgnoreOutboundPorts == nil {
-		r.Spec.Proxy.IgnoreOutboundPorts = Ports{}
-	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.

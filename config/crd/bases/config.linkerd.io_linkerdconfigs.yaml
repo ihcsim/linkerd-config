@@ -101,18 +101,14 @@ spec:
                 disableExternalProfiles:
                   type: boolean
                 ignoreInboundPorts:
-                  description: Ports is a collection of ports.
                   items:
-                    description: Port represents a port number.
-                    format: int32
-                    type: integer
+                    description: PortRange is a range of ports.
+                    type: string
                   type: array
                 ignoreOutboundPorts:
-                  description: Ports is a collection of ports.
                   items:
-                    description: Port represents a port number.
-                    format: int32
-                    type: integer
+                    description: PortRange is a range of ports.
+                    type: string
                   type: array
                 inboundPort:
                   description: Port represents a port number.

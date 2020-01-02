@@ -17,7 +17,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -36,8 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/linkerd/linkerd-config/api/v1alpha1"
-	configv1alpha1 "github.com/linkerd/linkerd-config/api/v1alpha1"
+	"github.com/ihcsim/linkerd-config/api/v1alpha1"
+	configv1alpha1 "github.com/ihcsim/linkerd-config/api/v1alpha1"
 )
 
 // LinkerdConfigReconciler reconciles a LinkerdConfig object
@@ -194,13 +193,14 @@ func (r *LinkerdConfigReconciler) reconcileConfigMap(ctx context.Context, config
 	}
 
 	// reconcile the 'global' and 'proxy' data.
-	reconcileData := func(dataKey string, spec interface{}) error {
-		desiredConfig, err := json.Marshal(spec)
+	// also, convert them to the Linkerd proto format.
+	reconcileData := func(dataKey string, toProtoJSON func() (string, error)) error {
+		p, err := toProtoJSON()
 		if err != nil {
 			return err
 		}
 
-		configmap.Data[dataKey] = string(desiredConfig)
+		configmap.Data[dataKey] = p
 		log.V(1).Info("successfully reconciled configmap data", "key", dataKey)
 		return nil
 	}
@@ -210,11 +210,11 @@ func (r *LinkerdConfigReconciler) reconcileConfigMap(ctx context.Context, config
 		keyProxy  = "proxy"
 	)
 
-	if err := reconcileData(keyGlobal, config.Spec.Global); err != nil {
+	if err := reconcileData(keyGlobal, config.Spec.Global.ToProtoJSON); err != nil {
 		return err
 	}
 
-	if err := reconcileData(keyProxy, config.Spec.Proxy); err != nil {
+	if err := reconcileData(keyProxy, config.Spec.Proxy.ToProtoJSON); err != nil {
 		return err
 	}
 
