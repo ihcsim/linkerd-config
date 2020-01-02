@@ -11,18 +11,16 @@ spec:
       trustDomain: cluster.local
       trustAnchorsPEM: |
         -----BEGIN CERTIFICATE-----
-        MIIBwTCCAWegAwIBAgIRALnGbDHymcPcwLNGIh3MHIwwCgYIKoZIzj0EAwIwKTEn
-        MCUGA1UEAxMeaWRlbnRpdHkubGlua2VyZC5jbHVzdGVyLmxvY2FsMB4XDTE5MTIz
-        MDA0MDMwMFoXDTI5MTIyNzA0MDMwMFowKTEnMCUGA1UEAxMeaWRlbnRpdHkubGlu
-        a2VyZC5jbHVzdGVyLmxvY2FsMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyUNf
-        JbwAaGdN8EIDA0UFoEhYh9TudqumTkdwWM6kpIdEBTR1Ysg939S5zziCFTYFHjB7
-        U37h4kTNPq+9fRlUtaNwMG4wDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYB
-        Af8CAQEwHQYDVR0OBBYEFCcAIt4ukdA1IlACi2EcSBYYruMKMCkGA1UdEQQiMCCC
-        HmlkZW50aXR5LmxpbmtlcmQuY2x1c3Rlci5sb2NhbDAKBggqhkjOPQQDAgNIADBF
-        AiBirnYYl0RyoOLMhw277hJGgK//UyWMI7X/Q9qvRkHmjAIhAIAoF2KxnbpZrYEN
-        Br5qTZbrlYb18EX05ZCFu28YYupT
+        MIIBgjCCASmgAwIBAgIBATAKBggqhkjOPQQDAjApMScwJQYDVQQDEx5pZGVudGl0
+        eS5saW5rZXJkLmNsdXN0ZXIubG9jYWwwHhcNMjAwMTAyMDYwNjAxWhcNMjEwMTAx
+        MDYwNjIxWjApMScwJQYDVQQDEx5pZGVudGl0eS5saW5rZXJkLmNsdXN0ZXIubG9j
+        YWwwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQdddzpXPQRsC5EpbcGw0KDZDzk
+        OTODqMqPDeT2oZj1ioaCosF4JQpeNVeL7HqVGJBGpNAQI+z2GP9NDF+o1nDuo0Iw
+        QDAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMC
+        MA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwIDRwAwRAIgUiL4/o9/cBmA7tkc
+        FQdu1/mUG364kc9gJh6SGJqgdSgCIHTcnK4xilrxpuPeRpwPn5Got1Ra2kv+CU9E
+        Pxzf/r/A
         -----END CERTIFICATE-----
-
       issuanceLifeTime: 86400s
       clockSkewAllowance: 20s
       scheme: linkerd.io/tls
