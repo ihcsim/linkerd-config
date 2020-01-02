@@ -1,7 +1,7 @@
 apiVersion: config.linkerd.io/v1alpha1
 kind: LinkerdConfig
 metadata:
-  name: linkerd-config
+  name: edge-19.12.3
 spec:
 
   # these are the user-managed fields where the mutating webhook won't be able
