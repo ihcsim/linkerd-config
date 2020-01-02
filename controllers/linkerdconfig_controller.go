@@ -110,6 +110,9 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		log.Info("successfully reconciled configmap", "result", result)
 
 		go func() {
+			// give the proxy injector time to pick up the new configmap changes
+			time.Sleep(time.Minute * 1)
+
 			restarted, err := r.restartPods(ctx, log)
 			if err != nil {
 				log.Error(err, "fail to restart some pods")
