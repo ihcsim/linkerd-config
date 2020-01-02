@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+  annotations:
+    linkerd.io/created-by: linkerd/cli edge-19.12.1
+  labels:
+    linkerd.io/control-plane-component: config-controller
+    linkerd.io/control-plane-ns: linkerd
