@@ -20,3 +20,27 @@ spec:
     metadata:
       labels:
         config.linkerd.io/reconcile: auto
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: emojivoto
+spec:
+  template:
+    metadata:
+      labels:
+        config.linkerd.io/reconcile: auto
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote-bot
+  namespace: emojivoto
+spec:
+  template:
+    metadata:
+      labels:
+        config.linkerd.io/reconcile: auto
