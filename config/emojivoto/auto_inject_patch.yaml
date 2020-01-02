@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emoji
+  namespace: emojivoto
+spec:
+  template:
+    metadata:
+      annotations:
+        linkerd.io/inject: enabled
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voting
+  namespace: emojivoto
+spec:
+  template:
+    metadata:
+      annotations:
+        linkerd.io/inject: enabled
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: emojivoto
+spec:
+  template:
+    metadata:
+      annotations:
+        linkerd.io/inject: enabled
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote-bot
+  namespace: emojivoto
+spec:
+  template:
+    metadata:
+      annotations:
+        linkerd.io/inject: enabled

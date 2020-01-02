@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emoji
+  namespace: emojivoto
+spec:
+  template:
+    metadata:
+      labels:
+        config.linkerd.io/reconcile: auto
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voting
+  namespace: emojivoto
+spec:
+  template:
+    metadata:
+      labels:
+        config.linkerd.io/reconcile: auto

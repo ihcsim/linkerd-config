@@ -101,7 +101,7 @@ cert-manager:
 controller: docker-build kind-load deploy
 
 emojivoto:
-	linkerd inject https://run.linkerd.io/emojivoto.yml | kubectl apply -f -
+	kubectl apply -k config/emojivoto
 
 kind-cluster:
 	kind create cluster --name=${KIND_CLUSTER}
