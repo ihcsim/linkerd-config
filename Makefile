@@ -1,6 +1,10 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= linkerd-config-controller:latest
+
+# The name of the Kind cluster
+KIND_CLUSTER ?= linkerd
+
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -89,14 +93,23 @@ purge: clean
 	kubectl delete ns cert-manager
 	linkerd install --ignore-cluster | kubectl delete -f -
 
-linkerd:
-	kubectl label ns kube-system config.linkerd.io/admission-webhooks=disabled
-	linkerd install | kubectl apply -f -
-
 cert-manager:
 	kubectl create ns cert-manager
 	kubectl label ns cert-manager config.linkerd.io/admission-webhooks=disabled
 	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml
 
+controller: docker-build kind-load deploy
+
 emojivoto:
 	linkerd inject https://run.linkerd.io/emojivoto.yml | kubectl apply -f -
+
+kind-cluster:
+	kind create cluster --name=${KIND_CLUSTER}
+
+kind-load:
+	kind load docker-image linkerd-config-controller --name=${KIND_CLUSTER}
+
+.PHONY: linkerd
+linkerd:
+	kubectl label ns kube-system config.linkerd.io/admission-webhooks=disabled
+	linkerd install | kubectl apply -f -
