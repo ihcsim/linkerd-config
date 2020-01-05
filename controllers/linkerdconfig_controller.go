@@ -55,6 +55,7 @@ type LinkerdConfigReconciler struct {
 // +kubebuilder:rbac:groups="",resources="configmaps",verbs=get;create;update;list;watch
 // +kubebuilder:rbac:groups="",resources="events",verbs=create;patch
 
+// Reconcile is the reconciliation method for the linkerdconfigs custom resources.
 func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var (
 		ctx = context.Background()
@@ -156,6 +157,7 @@ func (r *LinkerdConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	return ctrl.Result{}, nil
 }
 
+// SetupWithManager links the reconciler to the manager.
 func (r *LinkerdConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// set up an index to allow us to list pods by their pod phase field.
 	// the client will use the r.indexFieldPodPhase as the index key.
